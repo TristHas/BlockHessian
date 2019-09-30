@@ -22,6 +22,7 @@ class Activation(nn.Module):
             msk = (x>0).detach()
             self.last_msk=msk
             return x*msk
+        
         elif self.mode=="replay":
             assert self.mode=="relu" and self.last_msk is not None
             return x*self.last_msk
@@ -49,7 +50,7 @@ class MLP(nn.Module):
         self.l1 = FC(inp, hid, bias=bias, mode=mode)
         self.layers = nn.Sequential(*[FC(hid, hid, bias=bias, mode=mode) \
                                       for i in range(max(0,nlayer-2))])
-        self.out = FC(hid, out, bias=bias, mode=mode)
+        self.out = FC(hid, out, bias=bias, mode="linear")
         
     def forward(self, x):
         """
