@@ -31,6 +31,7 @@ def eval_loss(model, ds, loss_fn, compute_grad=True):
 
 def block_hessian_off_diag(model, ds, loss_fn, lr):
     """
+        
     """
     base_model = clone_model(model)
     H = init_hessian(base_model)
@@ -58,6 +59,7 @@ def block_hessian_off_diag(model, ds, loss_fn, lr):
 
 def block_hessian_diag(model, ds, loss_fn, lr):
     """
+        
     """
     base_model = clone_model(model) 
     diagonal = []
@@ -98,6 +100,8 @@ def block_hessian(model, ds, loss_fn, lr):
 
 def curvature_effects(model, ds, loss_fn, lr):
     """
+        Returns O(lr) terms of the Taylor expansion:
+        hoe = L(theta_t1) - L(theta_t) + lr * (delta_theta * grad_theta)
     """    
     model = clone_model(model) 
     # Get loss(t) and gradients

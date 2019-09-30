@@ -2,9 +2,9 @@ import torch
 
 def gradient(outputs, inputs, grad_outputs=None, retain_graph=None, create_graph=False):
     '''
-    Compute the gradient of `outputs` with respect to `inputs`
-    gradient(x.sum(), x)
-    gradient((x * y).sum(), [x, y])
+        Compute the gradient of `outputs` with respect to `inputs`
+        gradient(x.sum(), x)
+        gradient((x * y).sum(), [x, y])
     '''
     if torch.is_tensor(inputs):
         inputs = [inputs]
@@ -20,10 +20,10 @@ def gradient(outputs, inputs, grad_outputs=None, retain_graph=None, create_graph
 
 def jacobian(outputs, inputs, create_graph=False):
     '''
-    Compute the Jacobian of `outputs` with respect to `inputs`
-    jacobian(x, x)
-    jacobian(x * y, [x, y])
-    jacobian([x * y, x.sqrt()], [x, y])
+        Compute the Jacobian of `outputs` with respect to `inputs`
+        jacobian(x, x)
+        jacobian(x * y, [x, y])
+        jacobian([x * y, x.sqrt()], [x, y])
     '''
     if torch.is_tensor(outputs):
         outputs = [outputs]

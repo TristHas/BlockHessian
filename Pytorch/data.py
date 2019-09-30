@@ -9,3 +9,4 @@ def gen_rnd_ds(inp_dim, inp_mean=0, inp_var=1,
     x = mean + var
     y = torch.randint(0, target_dim, (nsamp,1))
     return [(x.cuda(device),y.cuda(device))]
+
