@@ -1,4 +1,4 @@
-Pytorch/*.ipynb
+#Pytorch/*.ipynb
 Pytorch/__pycache__/*
 Pytorch/.ipynb_checkpoints/*
 JAX/.ipynb_checkpoints/*
