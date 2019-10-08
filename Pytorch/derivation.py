@@ -1,4 +1,5 @@
 import torch
+from utils import zero_grad
 
 def gradient(outputs, inputs, grad_outputs=None, retain_graph=None, create_graph=False):
     '''
@@ -82,3 +83,54 @@ def hessian(output, inputs, out=None, allow_unused=False, create_graph=False):
         del grad
 
     return out
+
+def infer_layer_idx(grads):
+    """
+    """
+    return torch.cumsum(torch.LongTensor([0] + [g.numel() for g in grads]), 0)
+
+def block_norm(H, deltas):
+    """
+    """
+    N = len(deltas)
+    idx = infer_layer_idx(deltas)
+    BHN = torch.zeros(N,N)
+    
+    for i in range(N):
+        for j in range(N):
+            h = H[idx[i]:idx[i+1], idx[j]:idx[j+1]]
+            BHN[i,j]=torch.norm(h)
+            
+    return BHN
+
+def block_multiply(H, deltas):
+    """
+    """
+    N = len(deltas)
+    idx = infer_layer_idx(deltas)
+    DHD = torch.zeros(N,N)
+    
+    for i in range(N):
+        for j in range(N):
+            h = H[idx[i]:idx[i+1], idx[j]:idx[j+1]]
+            a,b = deltas[i], deltas[j]
+            dhd = a.view(1,-1).mm(h).mm(b.view(-1,1)).item()
+            DHD[i,j]=dhd
+    return DHD
+
+def get_hessian_grad_block(model, ds, loss_fn):
+    """
+    """
+    x,y = ds[0]
+
+    # Get gradients
+    zero_grad(model)
+    loss_fn(model(x),y).backward()
+    grads = [x.grad.clone().view(-1) for i,x in enumerate(model.parameters())]
+    grad_norms = [torch.norm(g) for g in grads]
+
+    zero_grad(model)
+    out = loss_fn(model(x),y)
+    H = hessian(out, model.parameters())
+    DHD = block_multiply(H, grads)
+    return H, grads, DHD
