@@ -1,5 +1,8 @@
 #Pytorch/*.ipynb
 Pytorch/__pycache__/*
+Pytorch/src/__pycache__/*
 Pytorch/.ipynb_checkpoints/*
+Pytorch/notebooks/calibration/.ipynb_checkpoints/*
+Pytorch/src/.ipynb_checkpoints/*
 JAX/.ipynb_checkpoints/*
 JAX/__pycache__

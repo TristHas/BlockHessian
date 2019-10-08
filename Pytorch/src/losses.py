@@ -18,7 +18,7 @@ class SquaredClassification(nn.Module):
         """
         """
         label = self.lookup[label]
-        return self.reduce(out-label)
+        return self.reduce((out-label)**2)
     
 class LinearClassification(nn.Module):
     def __init__(self, target_dim, label_term=False,
