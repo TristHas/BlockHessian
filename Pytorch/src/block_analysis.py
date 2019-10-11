@@ -13,7 +13,7 @@ def higher_orders(loss_t, loss_t1, lr, grad, delta):
     """
     """
     first_order = dot_product(grad, delta)
-    return (loss_t - loss_t1 - lr*first_order) / (2*lr**2)
+    return -2*(loss_t - loss_t1 - lr*first_order) / (lr**2)
 
 def eval_loss(model, ds, loss_fn, compute_grad=True):
     """
@@ -48,13 +48,13 @@ def block_hessian_off_diag(model, ds, loss_fn, lr):
         grad  = (grads[i].clone(), grads[j].clone())
         # Compute delta_theta (=normalized gradient vector for now)
         # But we need to consider other training algo (momentum, etc.)
-        delta = get_delta_params(model, grad) 
+        delta = grad#get_delta_params(model, grad) 
         # Possible context manager
         update_params(pair, delta, lr) 
         loss_t1 = eval_loss(model, ds, loss_fn, False)
         
         h = higher_orders(loss_t, loss_t1, lr, grad, delta)
-        H[i,j] = H[j,i] = h/2
+        H[i,j] = H[j,i] = h
     return H
 
 def block_hessian_diag(model, ds, loss_fn, lr):
@@ -72,7 +72,7 @@ def block_hessian_diag(model, ds, loss_fn, lr):
         model = clone_model(base_model)        
         pair  = (get_param(model, i), )
         grad  = (grads[i].clone(),)
-        delta = get_delta_params(model, grad)
+        delta = grad#get_delta_params(model, grad)
         
         update_params(pair, delta, lr)
         loss_t1 = eval_loss(model, ds, loss_fn, False)
@@ -83,12 +83,13 @@ def block_hessian_diag(model, ds, loss_fn, lr):
 
 def _merge_blocks(H, d):
     """
-        Substract H_{ij} = H_{ij}-d_{i}-d_{j}
+        Substract H_{ij} = (H_{ij}-d_{i}-d_{j})/2
         Set H_{ii} = d_{i}
     """
     D = -(d.view(1,-1) + d.view(-1,1))
-    D[range(D.shape[0]), range(D.shape[0])]=d
-    return H + D
+    H = (H+D)/2
+    H[range(H.shape[0]), range(H.shape[0])]=d
+    return H 
 
 def block_hessian(model, ds, loss_fn, lr):
     """
@@ -108,7 +109,7 @@ def curvature_effects(model, ds, loss_fn, lr):
     # Get loss(t) and gradients
     loss_t = eval_loss(model, ds, loss_fn, True)
     grads = [x.grad for x in model.parameters()]
-    delta = get_delta_params(model, grads)
+    delta = grads#get_delta_params(model, grads)
     params = list(model.parameters())
     
     update_params(params, delta, lr)

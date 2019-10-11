@@ -13,7 +13,7 @@ def get_delta_params(model, grad_vec):
     """
     """
     norm = param_norm(grad_vec)
-    return list(map(lambda x:x/norm, grad_vec))
+    return grad_vec#list(map(lambda x:x/norm, grad_vec))
         
 def dot_product(delta, grad):
     """

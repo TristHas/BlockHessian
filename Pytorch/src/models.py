@@ -19,7 +19,7 @@ class Activation(nn.Module):
         """
         """
         if self.mode=="relu":
-            msk = (x>0).detach()
+            msk = (x>0).detach().to(x.dtype)
             self.last_msk=msk
             return x*msk
         

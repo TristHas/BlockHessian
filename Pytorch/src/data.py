@@ -7,6 +7,6 @@ def gen_rnd_ds(inp_dim, inp_mean=0, inp_var=1,
     mean = torch.randn((1,inp_dim))*inp_mean
     var  = torch.randn((nsamp,inp_dim))*inp_var
     x = mean + var
-    y = torch.randint(0, target_dim, (nsamp,1))
-    return [(x.cuda(device),y.cuda(device))]
+    y = torch.randint(0, target_dim, (nsamp,1)).long()
+    return [(x.cuda(device), y.cuda(device))]
 
