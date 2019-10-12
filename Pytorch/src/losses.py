@@ -9,16 +9,17 @@ class SquaredClassification(nn.Module):
                  reduce="mean", device=0):
         """
         """
+        assert reduce in ["mean", "sum"]
         super().__init__()
         self.lookup = torch.eye(target_dim).cuda(device)
-        self.reduce = lambda x:x.mean() if reduce == "mean" \
-                                        else lambda x:x.sum()
+        self.reduce = {"mean":lambda x:x.mean(),
+                       "sum": lambda x:x.sum()}[reduce]
         
     def forward(self, out, label):
         """
         """
-        label = self.lookup[label]
-        return self.reduce((out-label)**2)
+        label = self.lookup[label.squeeze()]
+        return self.reduce((out-label)**2) / 2
     
 class LinearClassification(nn.Module):
     def __init__(self, target_dim, label_term=False,
@@ -27,13 +28,13 @@ class LinearClassification(nn.Module):
         """
         super().__init__()
         self.lookup = torch.eye(target_dim).cuda(device)
-        self.reduce = lambda x:x.mean() if reduce == "mean" \
-                                        else lambda x:x.sum()
+        self.reduce = {"mean":lambda x:x.mean(),
+                       "sum": lambda x:x.sum()}[reduce]
         self.label_term = label_term
         
     def forward(self, out, label):
-        label = self.lookup[label]
-        loss  = -2 * out * label
+        label = self.lookup[label.squeeze()]
+        loss  = - out * label
         if self.label_term:
             raise NotImplementedError
         else:
