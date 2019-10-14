@@ -2,32 +2,7 @@ import torch
 from utils import pair_indexes, init_hessian, \
                   clone_model, get_param, \
                   get_delta_params, dot_product
-
-def update_params(params, deltas, lr):
-    """
-    """
-    for param, delta in zip(params, deltas):
-        param.data.add_(-lr, delta)
-    
-def higher_orders(loss_t, loss_t1, lr, grad, delta):
-    """
-    """
-    first_order = dot_product(grad, delta)
-    return -2*(loss_t - loss_t1 - lr*first_order) / (lr**2)
-
-def eval_loss(model, ds, loss_fn, compute_grad=True):
-    """
-    """
-    loss = 0
-    for x,y in ds:
-        if compute_grad:
-            loss_ = loss_fn(model(x),y)
-            loss_.backward()
-        else:
-            with torch.no_grad():
-                loss_ = loss_fn(model(x),y)
-        loss+=loss_.item()
-    return loss
+from block_analysis import update_params, eval_loss, higher_orders
 
 def block_hessian_off_diag(model, ds, loss_fn, lr):
     """
@@ -35,6 +10,9 @@ def block_hessian_off_diag(model, ds, loss_fn, lr):
     """
     base_model = clone_model(model)
     H = init_hessian(base_model)
+    
+    delta_norm_sq = torch.zeros_like(H)
+    
     # Get loss(t) and gradients
     loss_t = eval_loss(base_model, ds, loss_fn, True)
     grads = {i:x.grad for i,x in enumerate(base_model.parameters())}
@@ -55,7 +33,10 @@ def block_hessian_off_diag(model, ds, loss_fn, lr):
         
         h = higher_orders(loss_t, loss_t1, lr, grad, delta)
         H[i,j] = H[j,i] = h
-    return H
+        
+        delta_norm_sq[i,j] = delta_norm_sq[j,i] = delta[0].norm().item() * delta[1].norm().item()
+        
+    return H, delta_norm_sq
 
 def block_hessian_diag(model, ds, loss_fn, lr):
     """
@@ -63,6 +44,8 @@ def block_hessian_diag(model, ds, loss_fn, lr):
     """
     base_model = clone_model(model) 
     diagonal = []
+    
+    delta_norm_sq = []
     
     # Get loss(t) and gradients
     loss_t = eval_loss(base_model, ds, loss_fn, True)
@@ -79,7 +62,9 @@ def block_hessian_diag(model, ds, loss_fn, lr):
         h = higher_orders(loss_t, loss_t1, lr, grad, delta)
         diagonal.append(h)
         
-    return torch.cat(list(map(lambda x:x.view((1,)), diagonal)))
+        delta_norm_sq.append(delta[0].norm().item()**2)
+        
+    return torch.cat(list(map(lambda x:x.view((1,)), diagonal))), torch.Tensor(delta_norm_sq).to(torch.cuda.current_device())
 
 def _merge_blocks(H, d):
     """
@@ -95,10 +80,13 @@ def block_hessian(model, ds, loss_fn, lr):
     """
         Missing merge_DH(D, H)
     """
-    d = block_hessian_diag(model, ds, loss_fn, lr)
-    H = block_hessian_off_diag(model, ds, loss_fn, lr)
+    d, delta_norm_sq_d = block_hessian_diag(model, ds, loss_fn, lr)
+    H, delta_norm_sq_H = block_hessian_off_diag(model, ds, loss_fn, lr)
     
-    return _merge_blocks(H, d)
+    # delta_norm_sq
+    delta_norm_sq_H[range(H.shape[0]), range(H.shape[0])] = delta_norm_sq_d
+    
+    return _merge_blocks(H, d), delta_norm_sq_H
 
 def curvature_effects(model, ds, loss_fn, lr):
     """
@@ -115,3 +103,15 @@ def curvature_effects(model, ds, loss_fn, lr):
     update_params(params, delta, lr)
     loss_t1 = eval_loss(model, ds, loss_fn, False)
     return loss_t - loss_t1, higher_orders(loss_t, loss_t1, lr, grads, delta)
+
+def block_hessian_delta_normed(model, ds, loss_fn, lr):
+    BH, delta_norm_sq = block_hessian(model, ds, loss_fn, lr)
+    return BH/delta_norm_sq
+
+    for i,j in pair_indexes(model):
+        BH[i,j] = BH[j,i] = BH[i,j]/delta_norm_sq[i,j]
+        
+    for i, _ in enumerate(model.parameters()):
+        BH[i,i] = BH[i,i]/delta_norm_sq[i,i]
+    
+    return BH
