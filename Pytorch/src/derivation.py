@@ -84,6 +84,15 @@ def hessian(output, inputs, out=None, allow_unused=False, create_graph=False):
 
     return out
 
+def analytic_hessian_eigen(model, ds, loss_fn):
+    x,y = ds[0]
+    out = loss_fn(model(x),y)
+    H = hessian(out, model.parameters())
+    D, U = torch.eig(H, eigenvectors=True)
+    eigenval = D[:,0].cpu()
+    eigenvec = U.t().cpu()
+    return eigenval, eigenvec
+
 def infer_layer_idx(grads):
     """
     """
