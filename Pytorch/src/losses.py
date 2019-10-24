@@ -40,6 +40,21 @@ class LinearClassification(nn.Module):
         else:
             return self.reduce(loss)
         
+class SquaredTerm(nn.Module):
+    def __init__(self, target_dim, 
+                 reduce="mean", device=0):
+        """
+        """
+        assert reduce in ["mean", "sum"]
+        super().__init__()
+        self.reduce = {"mean":lambda x:x.mean(),
+                       "sum": lambda x:x.sum()}[reduce]
+        
+    def forward(self, out, label):
+        """
+        """
+        return self.reduce((out)**2) / 2
+    
 ###
 ### Regression losses
 ###
