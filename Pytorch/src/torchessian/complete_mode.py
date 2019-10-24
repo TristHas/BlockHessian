@@ -1,6 +1,6 @@
 import torch
 import tqdm
-from . import hessian_matmul
+from .utils import hessian_matmul
 
 def lanczos(model, loss_function, dataloader, m, buffer=2):
     """
