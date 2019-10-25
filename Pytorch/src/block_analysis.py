@@ -35,6 +35,8 @@ def block_hessian_off_diag(model, ds, loss_fn, lr):
     """
     base_model = clone_model(model)
     H = init_hessian(base_model)
+    
+    
     # Get loss(t) and gradients
     loss_t = eval_loss(base_model, ds, loss_fn, True)
     grads = {i:x.grad for i,x in enumerate(base_model.parameters())}
@@ -55,6 +57,7 @@ def block_hessian_off_diag(model, ds, loss_fn, lr):
         
         h = higher_orders(loss_t, loss_t1, lr, grad, delta)
         H[i,j] = H[j,i] = h
+        
     return H
 
 def block_hessian_diag(model, ds, loss_fn, lr):
