@@ -8,13 +8,13 @@ from block_analysis import block_hessian, curvature_effects
 def pp(lr, delta, h, H):
     rel = abs((h.item() - H.sum().item()) / min(abs(H.sum().item()), abs(h.item())))
     ratio = h.item() / H.sum().item()
-    print(f"LR {lr:.2E} \t || Delta={delta:.2E}\t ||Error={rel:.2E}  \t|| hoe={h.item():.2E} \t|| H={H.sum().item():.2E}\t||ratio={ratio:.2E}")
+    print(f"LR {lr:.2E} \t || Delta={delta:.2E}\t ||Error={rel:.2E}  \t|| hoe={h.item()} \t|| H={H.sum().item()}\t||ratio={ratio}")
 
 def lr_range(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False):
     for lr in range(start, stop, step):
         if log_scale:
             lr = 10**lr
-        H,_ = block_hessian(model, ds, loss_fn, lr)
+        H = block_hessian(model, ds, loss_fn, lr)
         delta, h = curvature_effects(model, ds, loss_fn, lr)
         pp(lr, delta, h, H)
         
@@ -26,7 +26,7 @@ def lr_search(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False, pri
     for lr in np.arange(start, stop, step):
         if log_scale:
             lr = 10.**lr
-        H,_ = block_hessian(model, ds, loss_fn, lr)
+        H = block_hessian(model, ds, loss_fn, lr)
         delta, h = curvature_effects(model, ds, loss_fn, lr)
         if print_log:
             pp(lr, delta, h, H)
@@ -43,9 +43,6 @@ def lr_search(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False, pri
     diff = np.insert(diff, 0, False)
     
     error_list = np.array(error_list)
-    print(error_list)
-    print(diff)
-    
     _idx = np.argmin(error_list[diff])
     idx = np.where(diff)[0][_idx]
         
@@ -79,5 +76,5 @@ def lr_calibrate(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False, 
                 print(10.**inf, 10.**best, 10.**sup)
             else:
                 print(inf,best,sup)
-                
+        
     return best if not log_scale else 10.**best
