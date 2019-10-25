@@ -1,3 +1,5 @@
+import math
+import torch
 import torch.nn as nn
 
 class Activation(nn.Module):
@@ -41,7 +43,15 @@ class FC(nn.Module):
         """
         """
         return self.act(self.fc(x))
-        
+    
+    def init_weights(self, init_type="variance"):
+        if init_type=="variance":
+            var = {"relu":2, "linear":1}[self.act.mode]
+            with torch.no_grad():
+                self.fc.weight.normal_(std=math.sqrt(var/self.fc.weight.shape[1]))
+        else:
+            raise NotImplementedError
+            
 class MLP(nn.Module):
     def __init__(self, inp, hid, out, nlayer, bias=False, mode="linear"):
         """
@@ -51,6 +61,8 @@ class MLP(nn.Module):
         self.layers = nn.Sequential(*[FC(hid, hid, bias=bias, mode=mode) \
                                       for i in range(max(0,nlayer-2))])
         self.out = FC(hid, out, bias=bias, mode="linear")
+        for l in filter(lambda x:isinstance(x,FC), self.modules()):
+            l.init_weights()
         
     def forward(self, x):
         """
