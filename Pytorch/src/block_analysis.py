@@ -1,7 +1,7 @@
 import torch
 from utils import pair_indexes, init_hessian, \
                   clone_model, get_param, \
-                  get_delta_params, dot_product
+                  get_delta_params, dot_product, zero_grad
 
 def update_params(params, deltas, lr):
     """
@@ -29,56 +29,54 @@ def eval_loss(model, ds, loss_fn, compute_grad=True):
         loss+=loss_.item()
     return loss
 
-def block_hessian_off_diag(model, ds, loss_fn, lr):
+def get_grad_loss(model, ds, loss_fn, lr):
+    zero_grad(model)
+    loss = eval_loss(model, ds, loss_fn, True)
+    grads = {i:x.grad.clone() for i,x in enumerate(model.parameters())}
+    return grads, loss
+
+def get_gnorms(grads, model):
+    with torch.no_grad():
+        gnorms = torch.cat([(grads[i]**2).sum().view(1,1) for i,_ in enumerate(model.parameters())])
+        return gnorms.mm(gnorms.t())
+    
+def _block_hessian_off_diag(model, ds, loss_fn, grads, loss_t, lr):
     """
         
     """
-    base_model = clone_model(model)
-    H = init_hessian(base_model)
-    
-    
-    # Get loss(t) and gradients
-    loss_t = eval_loss(base_model, ds, loss_fn, True)
-    grads = {i:x.grad for i,x in enumerate(base_model.parameters())}
-    
-    for i,j in pair_indexes(base_model):
+    H = init_hessian(model)    
+    for i,j in pair_indexes(model):
         # Copy the full model for now.
         # If this is too slow, we should make update_params
         # a context manager instead.
-        model = clone_model(base_model)
-        pair  = (get_param(model, i), get_param(model, j))
+        c_model = clone_model(model)
+        pair  = (get_param(c_model, i), get_param(c_model, j))
         grad  = (grads[i].clone(), grads[j].clone())
         # Compute delta_theta (=normalized gradient vector for now)
         # But we need to consider other training algo (momentum, etc.)
-        delta = grad#get_delta_params(model, grad) 
-        # Possible context manager
+        delta = grad #get_delta_params(model, grad) 
+        # TODO: context manager
         update_params(pair, delta, lr) 
-        loss_t1 = eval_loss(model, ds, loss_fn, False)
-        
+        loss_t1 = eval_loss(c_model, ds, loss_fn, False)
         h = higher_orders(loss_t, loss_t1, lr, grad, delta)
         H[i,j] = H[j,i] = h
         
     return H
 
-def block_hessian_diag(model, ds, loss_fn, lr):
+def _block_hessian_diag(model, ds, loss_fn, grads, loss_t, lr):
     """
         
     """
-    base_model = clone_model(model) 
     diagonal = []
-    
-    # Get loss(t) and gradients
-    loss_t = eval_loss(base_model, ds, loss_fn, True)
-    grads = {i:x.grad for i,x in enumerate(base_model.parameters())}
-
-    for i,_ in enumerate(base_model.parameters()):
-        model = clone_model(base_model)        
-        pair  = (get_param(model, i), )
+    for i,_ in enumerate(model.parameters()):
+        c_model = clone_model(model)        
+        pair  = (get_param(c_model, i), )
         grad  = (grads[i].clone(),)
         delta = grad#get_delta_params(model, grad)
         
+        # TODO: context manager
         update_params(pair, delta, lr)
-        loss_t1 = eval_loss(model, ds, loss_fn, False)
+        loss_t1 = eval_loss(c_model, ds, loss_fn, False)
         h = higher_orders(loss_t, loss_t1, lr, grad, delta)
         diagonal.append(h)
         
@@ -98,10 +96,13 @@ def block_hessian(model, ds, loss_fn, lr):
     """
         Missing merge_DH(D, H)
     """
-    d = block_hessian_diag(model, ds, loss_fn, lr)
-    H = block_hessian_off_diag(model, ds, loss_fn, lr)
-    
-    return _merge_blocks(H, d)
+    grads, loss_t = get_grad_loss(model, ds, loss_fn, lr)
+    gnorms = get_gnorms(grads, model)
+    d = _block_hessian_diag(model, ds, loss_fn, grads, loss_t, lr)
+    H = _block_hessian_off_diag(model, ds, loss_fn, grads, loss_t, lr)
+    H = _merge_blocks(H, d)
+    gnorms = get_gnorms(grads, model)
+    return H, gnorms
 
 def curvature_effects(model, ds, loss_fn, lr):
     """
