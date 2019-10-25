@@ -11,7 +11,7 @@ def lr_range(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False):
     for lr in range(start, stop, step):
         if log_scale:
             lr = 10**lr
-        H = block_hessian(model, ds, loss_fn, lr)
+        H,_ = block_hessian(model, ds, loss_fn, lr)
         delta, h = curvature_effects(model, ds, loss_fn, lr)
         pp(lr, delta, h, H)
         
@@ -23,7 +23,7 @@ def lr_search(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False):
     for lr in np.arange(start, stop, step):
         if log_scale:
             lr = 10.**lr
-        H = block_hessian(model, ds, loss_fn, lr)
+        H,_ = block_hessian(model, ds, loss_fn, lr)
         delta, h = curvature_effects(model, ds, loss_fn, lr)
         pp(lr, delta, h, H)
         rel = abs((h.item() - H.sum().item()) / min(abs(H.sum().item()), abs(h.item())))
@@ -37,6 +37,9 @@ def lr_search(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False):
     diff = np.insert(diff, 0, False)
     
     error_list = np.array(error_list)
+    print(error_list)
+    print(diff)
+    
     _idx = np.argmin(error_list[diff])
     idx = np.where(diff)[0][_idx]
         
