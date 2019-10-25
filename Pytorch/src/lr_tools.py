@@ -5,7 +5,7 @@ from block_analysis import block_hessian, curvature_effects
 def pp(lr, delta, h, H):
     rel = abs((h.item() - H.sum().item()) / min(abs(H.sum().item()), abs(h.item())))
     ratio = h.item() / H.sum().item()
-    print(f"LR {lr:.2E} \t || Delta={delta:.2E}\t ||Error={rel:.2E}  \t|| hoe={h.item()} \t|| H={H.sum().item()}\t||ratio={ratio}")
+    print(f"LR {lr:.2E} \t || Delta={delta:.2E}\t ||Error={rel:.2E}  \t|| hoe={h.item():.2E} \t|| H={H.sum().item():.2E}\t||ratio={ratio:.2E}")
 
 def lr_range(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False):
     for lr in range(start, stop, step):
@@ -56,11 +56,11 @@ def lr_search(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False):
 def lr_calibrate(model, ds, loss_fn, start=-8, stop=8, step=1, log_scale=False, width=1.e-4):
     
     inf, sup, best = lr_search(model, ds, loss_fn, start, stop, step, log_scale)
-    print(inf,best,sup)
+    print(inf, best, sup)
     
     while (sup-inf)>width:
         step = (sup-inf)/10
         inf, sup, best = lr_search(model, ds, loss_fn, inf, sup+step, step, False)
-        print(inf,best,sup)
+        print(inf, best, sup)
         
     return best
