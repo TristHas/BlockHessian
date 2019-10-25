@@ -9,3 +9,7 @@ JAX/.ipynb_checkpoints/*
 JAX/__pycache__
 Pytorch/src/torchessian/.ipynb_checkpoints/*
 Pytorch/src/torchessian/__pycache__/*
+
+Pytorch/notebooks/calibration/__pycache__/*
+Pytorch/notebooks/linear hessian/.ipynb_checkpoints/
+Pytorch/BH_delta_normalized/.ipynb_checkpoints/*
