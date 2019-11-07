@@ -1,4 +1,5 @@
 #Pytorch/*.ipynb
+Pytorch/data/
 Pytorch/__pycache__/*
 Pytorch/src/__pycache__/*
 Pytorch/.ipynb_checkpoints/*
