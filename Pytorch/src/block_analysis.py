@@ -60,7 +60,6 @@ class Updated_params():
         params_vals = self.params_vals
         with torch.no_grad():
             for param, params_val in zip(params, params_vals):
-                param.detach_()
                 param.set_(params_val)
             
 def _block_hessian_diag(model, ds, loss_fn, grads, loss_t, lr):
