@@ -51,15 +51,17 @@ class Updated_params():
 
     def __enter__(self):
         params, deltas, lr = self.args
-        for param, delta in zip(params, deltas):
-            param.data.add_(-lr, delta)
+        with torch.no_grad():
+            for param, delta in zip(params, deltas):
+                param.data.add_(-lr, delta)
 
     def __exit__(self, *args):
         params, _, lr = self.args
         params_vals = self.params_vals
-        for param, params_val in zip(params, params_vals):
-            param.detach_()
-            param.set_(params_val)
+        with torch.no_grad():
+            for param, params_val in zip(params, params_vals):
+                param.detach_()
+                param.set_(params_val)
             
 def _block_hessian_diag(model, ds, loss_fn, grads, loss_t, lr):
     """
