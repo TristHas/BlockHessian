@@ -7,7 +7,7 @@ def higher_orders(loss_t, loss_t1, lr, grad, delta):
     """
     """
     first_order = dot_product(grad, delta)
-    return -2*(loss_t - loss_t1 - lr * first_order) / (lr**2)
+    return (loss_t - loss_t1 - lr * first_order) * (-2 / (lr**2))
 
 def eval_loss(model, ds, loss_fn, compute_grad=True):
     """
@@ -31,7 +31,7 @@ def get_grad_loss(model, ds, loss_fn, lr):
 
 def get_gnorms(grads, model):
     with torch.no_grad():
-        gnorms = torch.cat([(grads[i]**2).sum().view(1,1) for i,_ in enumerate(model.parameters())])
+        gnorms = torch.cat([(grads[i]**2).sum().sqrt().view(1,1) for i,_ in enumerate(model.parameters())])
         return gnorms.mm(gnorms.t())
 
 def _merge_blocks(H, d):
