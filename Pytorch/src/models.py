@@ -107,11 +107,11 @@ class conv_bn(nn.Module):
         if use_bn:
             self.bn = nn.BatchNorm2d(out)
         self.act = Activation(mode)
+        torch.nn.init.kaiming_normal_(self.conv.weight, a={"relu":0, "linear":1}[mode])
         
     def forward(self, x):
         """
         """
-        #return self.act(self.conv(x))
         return self.act(self.bn(self.conv(x))) if self.use_bn else self.act(self.conv(x))
     
 class conv_net(nn.Module):
@@ -123,7 +123,7 @@ class conv_net(nn.Module):
         self.layers = nn.Sequential(*[conv_bn(hid, hid, bias=bias, use_bn=use_bn, mode=mode) \
                                       for i in range(max(0,nlayer-2))])
         self.GAPool = GAPool()
-        self.out = FC(hid, out, bias=bias, mode="linear")
+        self.out = FC(hid, out, bias=False, mode="linear")
         
     def forward(self, x):
         """
