@@ -22,7 +22,8 @@ def get_param_stats(param):
     std = param.std().item()
     g_mean = None if param.grad is None else param.grad.mean().item()
     g_std = None if param.grad is None else param.grad.std().item()
-    return mean, std, g_mean, g_std
+    g_sqr = None if param.grad is None else (param.grad**2).sum().item()
+    return mean, std, g_mean, g_std, g_sqr
 
 def get_activ_stats(inp):
     """
@@ -42,7 +43,7 @@ def process_stats(stats):
     df = df[df.columns[2:]]
     df.columns = ["a_l_m", "a_l_std", "A_c_m", "A_c_std", 
                   "g_l_m", "g_l_std", "G_c_m", "G_c_std", 
-                  "W_m", "W_std", "W_g_m", "W_g_std"]
+                  "W_m", "W_std", "W_g_m", "W_g_std", "W_g_sqr"]
     df["a_c_m_std"] = df["A_c_m"].apply(np.std)
     df["a_c_std_m"] = df["A_c_std"].apply(np.mean)
     df["g_c_m_std"] = df["G_c_m"].apply(np.std)
