@@ -38,7 +38,7 @@ class FC(nn.Module):
         super().__init__()
         self.fc = nn.Linear(inp, out, bias=bias)
         self.act = Activation(mode)
-        self.fc.init_weights()
+        self.init_weights()
         
     def forward(self, x):
         """
@@ -121,7 +121,7 @@ class conv_net(nn.Module):
         """
         super().__init__()
         self.l1 = conv_bn(inp, hid, stride=2, bias=bias, use_bn=use_bn, mode=mode)
-        self.layers = nn.Sequential(*[conv_bn(hid, hid, bias=bias, use_bn=use_bn, mode=mode) \
+        self.layers = nn.Sequential(*[conv_bn(hid, hid, stride=2, bias=bias, use_bn=use_bn, mode=mode) \
                                       for i in range(max(0,nlayer-2))])
         self.GAPool = GAPool()
         self.out = FC(hid, out, bias=False, mode="linear")

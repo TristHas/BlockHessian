@@ -1,39 +1,10 @@
 import torch
 from utils import pair_indexes, init_hessian, \
                   clone_model, get_param, \
-                  dot_product, zero_grad
+                  dot_product, zero_grad, \
+                  Updated_params, eval_loss, \
+                  higher_orders
     
-def higher_orders(loss_t, loss_t1, lr, grad, delta):
-    """
-    """
-    first_order = dot_product(grad, delta)
-    return (loss_t - loss_t1 - lr * first_order) #* (-2 / (lr**2))
-
-def eval_loss(model, ds, loss_fn, compute_grad=True):
-    """
-    """
-    loss = 0
-    for x,y in ds:
-        if compute_grad:
-            loss_ = loss_fn(model(x),y)
-            loss_.backward()
-        else:
-            with torch.no_grad():
-                loss_ = loss_fn(model(x),y)
-        loss+=loss_.item()
-    return loss
-
-def get_grad_loss(model, ds, loss_fn, lr):
-    zero_grad(model)
-    loss = eval_loss(model, ds, loss_fn, True)
-    grads = {i:x.grad.clone() for i,x in enumerate(model.parameters())}
-    return grads, loss
-
-def get_gnorms(grads, model):
-    with torch.no_grad():
-        gnorms = torch.cat([(grads[i]**2).sum().sqrt().view(1,1) for i,_ in enumerate(model.parameters())])
-        return gnorms.mm(gnorms.t())
-
 def _merge_blocks(H, d):
     """
         Substract H_{ij} = (H_{ij}-d_{i}-d_{j})/2
@@ -43,24 +14,6 @@ def _merge_blocks(H, d):
     H = (H+D)/2
     H[range(H.shape[0]), range(H.shape[0])]=d
     return H 
-
-class Updated_params():
-    def __init__(self, params, deltas, lr):
-        self.args = params, deltas, lr
-        self.params_vals = [p.data.clone() for p in params]
-
-    def __enter__(self):
-        params, deltas, lr = self.args
-        with torch.no_grad():
-            for param, delta in zip(params, deltas):
-                param.data.add_(-lr, delta)
-
-    def __exit__(self, *args):
-        params, _, lr = self.args
-        params_vals = self.params_vals
-        with torch.no_grad():
-            for param, params_val in zip(params, params_vals):
-                param.set_(params_val)
             
 def _block_hessian_diag(model, ds, loss_fn, grads, loss_t, lr):
     """
@@ -102,27 +55,10 @@ def block_hessian(model, ds, loss_fn, lr):
     """
     model = clone_model(model)
     grads, loss_t = get_grad_loss(model, ds, loss_fn, lr)
-    gnorms = get_gnorms(grads, model)
     d = _block_hessian_diag(model, ds, loss_fn, grads, loss_t, lr)
     H = _block_hessian_off_diag(model, ds, loss_fn, grads, loss_t, lr)
     H = _merge_blocks(H, d)
-    return H, gnorms
-
-def curvature_effects(model, ds, loss_fn, lr):
-    """
-        Returns O(lr) terms of the Taylor expansion:
-        hoe = L(theta_t1) - L(theta_t) + lr * (delta_theta * grad_theta)
-    """    
-    model = clone_model(model) 
-    # Get loss(t) and gradients
-    loss_t = eval_loss(model, ds, loss_fn, True)
-    grads = [x.grad for x in model.parameters()]
-    delta = grads#get_delta_params(model, grads)
-    params = list(model.parameters())
-    
-    update_params(params, delta, lr)
-    loss_t1 = eval_loss(model, ds, loss_fn, False)
-    return loss_t - loss_t1, higher_orders(loss_t, loss_t1, lr, grads, delta)
+    return H
 
 ###
 ###
@@ -186,3 +122,26 @@ def legacy_block_hessian(model, ds, loss_fn, lr):
     H = _merge_blocks(H, d)
     #gnorms = get_gnorms(grads, model)
     return H, gnorms
+
+def get_grad_loss(model, ds, loss_fn, lr):
+    zero_grad(model)
+    loss = eval_loss(model, ds, loss_fn, True)
+    grads = {i:x.grad.clone() for i,x in enumerate(model.parameters())}
+    return grads, loss
+
+
+def curvature_effects(model, ds, loss_fn, lr):
+    """
+        Returns O(lr) terms of the Taylor expansion:
+        hoe = L(theta_t1) - L(theta_t) + lr * (delta_theta * grad_theta)
+    """    
+    model = clone_model(model) 
+    # Get loss(t) and gradients
+    loss_t = eval_loss(model, ds, loss_fn, True)
+    grads = [x.grad for x in model.parameters()]
+    delta = grads#get_delta_params(model, grads)
+    params = list(model.parameters())
+    
+    update_params(params, delta, lr)
+    loss_t1 = eval_loss(model, ds, loss_fn, False)
+    return loss_t - loss_t1, higher_orders(loss_t, loss_t1, lr, grads, delta)

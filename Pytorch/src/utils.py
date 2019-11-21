@@ -65,4 +65,48 @@ def pair_indexes(model):
         for j,_ in enumerate(model.parameters()):
             if i<j:
                 yield i,j
-                
+
+class Updated_params():
+    def __init__(self, params, deltas, lr):
+        self.args = params, deltas, lr
+        self.params_vals = [p.data.clone() for p in params]
+
+    def __enter__(self):
+        params, deltas, lr = self.args
+        with torch.no_grad():
+            for param, delta in zip(params, deltas):
+                param.data.add_(-lr, delta)
+
+    def __exit__(self, *args):
+        params, _, lr = self.args
+        params_vals = self.params_vals
+        with torch.no_grad():
+            for param, params_val in zip(params, params_vals):
+                param.set_(params_val)
+
+def eval_loss(model, ds, loss_fn, compute_grad=True):
+    """
+        WARNING: first_order analysis incompatibility in multi-batch
+    """
+    loss = 0
+    for x,y in ds:
+        if compute_grad:
+            x.requires_grad = True
+            loss_ = loss_fn(model(x),y)
+            loss_.backward()
+        else:
+            with torch.no_grad():
+                loss_ = loss_fn(model(x),y)
+        loss+=loss_.item()
+    return loss
+
+def higher_orders(loss_t, loss_t1, lr, grad, delta):
+    """
+    """
+    fo = first_order(grad, delta, lr)
+    return (loss_t - loss_t1 - fo) 
+
+def first_order(grad, delta, lr):
+    """
+    """
+    return lr * dot_product(grad, delta)

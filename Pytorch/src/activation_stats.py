@@ -2,7 +2,8 @@ import torch.nn as nn
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import zero_grad
+from utils import zero_grad, Updated_params, eval_loss,\
+                  higher_orders, first_order
 
 DEFAULT_LTYPE = {nn.Conv2d, nn.Linear}
 
@@ -54,26 +55,45 @@ def process_stats(stats):
 ###
 ### Logic
 ###
-def first_order_analysis(model, inp=None, lbl=None, loss_fn=None, ltype=DEFAULT_LTYPE):
+def first_order_analysis(model, ds=None, loss_fn=None, 
+                         lr=.001, ltype=DEFAULT_LTYPE):
+    loss_t, stats = first_order_stats(model, ds, loss_fn, ltype)
+    
+    grads = [x.grad for x in model.parameters()]
+    delta_param = grads
+    params = list(model.parameters())
+    
+    with Updated_params(params, delta_param, lr):
+        loss_t1 = eval_loss(model, ds, loss_fn, False)
+
+    
+    fo = first_order(grads, delta_param, lr)
+    ho = higher_orders(loss_t, loss_t1, lr, grads, delta_param)
+    delta_loss = loss_t - loss_t1
+    return delta_loss, fo, ho, stats
+    
+def first_order_stats(model, ds=None, loss_fn=None, 
+                      ltype=DEFAULT_LTYPE):
     """
     """
     zero_grad(model)
-    activ_record = extract_activ_stats(model, inp, lbl, loss_fn, ltype)
+    loss, activ_record = extract_activ_stats(model, ds, loss_fn, ltype)
     param_record = extract_param_stats(model) 
     record = merge_records(activ_record, param_record)
-    return process_stats(record)
+    return loss, process_stats(record)
 
-def extract_activ_stats(model, inp=None, lbl=None, loss_fn=None, ltype=DEFAULT_LTYPE):
+def extract_activ_stats(model, ds=None, loss_fn=None,
+                        ltype=DEFAULT_LTYPE):
     """
+        WARNING: first_order analysis incompatibility in multi-batch
     """
     records = {}
-    inp.requires_grad = True
     layers = select_layers(model, ltype)
     fwd_hr = register_fwd_hooks(model, records, layers)
     bwd_hr = register_bwd_hooks(model, records, layers)
-    loss = run_model(model, inp, lbl, loss_fn)
+    loss = eval_loss(model, ds, loss_fn)
     [h.remove() for h in fwd_hr + bwd_hr]
-    return records
+    return loss, records
     
 def extract_param_stats(model, ltype=DEFAULT_LTYPE):
     """
@@ -97,21 +117,6 @@ def select_layers(model, ltype=DEFAULT_LTYPE):
     check_ltype = lambda x: type(x) in ltype 
     return list(filter(check_ltype, model.modules()))    
     
-def run_model(model, inp=None, lbl=None, loss_fn=None):
-    """
-    """
-    
-    out = model(inp)
-    if loss_fn is not None:
-        if lbl is not None:
-            loss = loss_fn(out, lbl)
-        else:
-            loss = loss_fn(out)
-    else:
-        loss = (out**2).mean()
-    loss.backward()
-    return loss.item()
-
 def register_fwd_hooks(model, records, layers):
     """
     """
