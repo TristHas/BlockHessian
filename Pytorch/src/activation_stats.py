@@ -104,9 +104,9 @@ def run_model(model, inp=None, lbl=None, loss_fn=None):
     out = model(inp)
     if loss_fn is not None:
         if lbl is not None:
-            loss_fn(out, lbl)
+            loss = loss_fn(out, lbl)
         else:
-            loss_fn(out)
+            loss = loss_fn(out)
     else:
         loss = (out**2).mean()
     loss.backward()
