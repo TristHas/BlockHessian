@@ -38,6 +38,7 @@ class FC(nn.Module):
         super().__init__()
         self.fc = nn.Linear(inp, out, bias=bias)
         self.act = Activation(mode)
+        self.fc.init_weights()
         
     def forward(self, x):
         """
@@ -48,7 +49,7 @@ class FC(nn.Module):
         if init_type=="variance":
             var = {"relu":2, "linear":1}[self.act.mode]
             with torch.no_grad():
-                self.fc.weight.normal_(std=math.sqrt(var/self.fc.weight.shape[1]))
+                self.fc.weight.normal_(std=math.sqrt(var/self.fc.weight.shape[0]))
         else:
             raise NotImplementedError
             
