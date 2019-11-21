@@ -7,7 +7,7 @@ def higher_orders(loss_t, loss_t1, lr, grad, delta):
     """
     """
     first_order = dot_product(grad, delta)
-    return (loss_t - loss_t1 - lr * first_order) * (-2 / (lr**2))
+    return (loss_t - loss_t1 - lr * first_order) #* (-2 / (lr**2))
 
 def eval_loss(model, ds, loss_fn, compute_grad=True):
     """
