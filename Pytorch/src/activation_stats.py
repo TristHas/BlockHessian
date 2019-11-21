@@ -2,6 +2,7 @@ import torch.nn as nn
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from utils import zero_grad
 
 DEFAULT_LTYPE = {nn.Conv2d, nn.Linear}
 
@@ -56,6 +57,7 @@ def process_stats(stats):
 def first_order_analysis(model, inp=None, lbl=None, loss_fn=None, ltype=DEFAULT_LTYPE):
     """
     """
+    zero_grad(model)
     activ_record = extract_activ_stats(model, inp, lbl, loss_fn, ltype)
     param_record = extract_param_stats(model) 
     record = merge_records(activ_record, param_record)
