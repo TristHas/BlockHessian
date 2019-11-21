@@ -98,11 +98,11 @@ class GAPool(nn.Module):
         return torch.mean(x,(2,3))
 
 class conv_bn(nn.Module):
-    def __init__(self, inp, out, bias=False, use_bn=False, mode="linear"):
+    def __init__(self, inp, out, stride=1, bias=False, use_bn=False, mode="linear"):
         """
         """
         super().__init__()
-        self.conv = nn.Conv2d(inp, out, kernel_size=3, stride=1, padding=1, bias=bias)
+        self.conv = nn.Conv2d(inp, out, kernel_size=3, stride=stride, padding=1, bias=bias)
         self.use_bn = use_bn
         if use_bn:
             self.bn = nn.BatchNorm2d(out)
@@ -119,7 +119,7 @@ class conv_net(nn.Module):
         """
         """
         super().__init__()
-        self.l1 = conv_bn(inp, hid, bias=bias, use_bn=use_bn, mode=mode)
+        self.l1 = conv_bn(inp, hid, stride=2, bias=bias, use_bn=use_bn, mode=mode)
         self.layers = nn.Sequential(*[conv_bn(hid, hid, bias=bias, use_bn=use_bn, mode=mode) \
                                       for i in range(max(0,nlayer-2))])
         self.GAPool = GAPool()
