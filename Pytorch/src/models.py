@@ -2,6 +2,34 @@ import math
 import torch
 import torch.nn as nn
 
+class BN2d_ctrl(nn.Module):
+    def __init__(self, num_features, use_bn=True, eps=1e-5):
+        super().__init__()
+        if isinstance(use_bn, bool):
+            use_bn = [use_bn]*4
+
+        self.ctr = use_bn[0]
+        self.std = use_bn[1]
+        self.scl = use_bn[2]
+        self.bias = use_bn[3]
+        self.eps = eps
+        if self.scl:
+            self.bn_weight = nn.Parameter(torch.ones(num_features))
+        if self.bias:
+            self.bn_bias = nn.Parameter(torch.zeros(num_features))
+        
+    def forward(self, x):
+        if self.ctr:
+            x = x - x.mean(dim=(0,2,3), keepdim=True)
+        if self.std:
+            x = x / x.std(dim=(0,2,3), keepdim=True)
+        if self.scl:
+            x = torch.mul(x, self.bn_weight.unsqueeze(0).unsqueeze(-1).unsqueeze(-1))
+        if self.bias:
+            x = torch.add(x, self.bn_bias.unsqueeze(0).unsqueeze(-1).unsqueeze(-1))
+        
+        return x
+
 class Activation(nn.Module):
     def __init__(self, mode="linear"):
         """
@@ -104,24 +132,23 @@ class conv_bn(nn.Module):
         """
         super().__init__()
         self.conv = nn.Conv2d(inp, out, kernel_size=3, stride=stride, padding=1, bias=bias)
-        self.use_bn = use_bn
-        if use_bn:
-            self.bn = nn.BatchNorm2d(out)
+        self.bn = BN2d_ctrl(out, use_bn)
         self.act = Activation(mode)
         torch.nn.init.kaiming_normal_(self.conv.weight, a={"relu":0, "linear":1}[mode])
         
     def forward(self, x):
         """
         """
-        return self.act(self.bn(self.conv(x))) if self.use_bn else self.act(self.conv(x))
+        return self.act(self.bn(self.conv(x)))
     
 class conv_net(nn.Module):
-    def __init__(self, inp, hid, out, nlayer, bias=False, use_bn=False, mode="linear"):
+    def __init__(self, inp, hid, out, nlayer, 
+                 bias=False, use_bn=False, mode="linear"):
         """
         """
         super().__init__()
         self.l1 = conv_bn(inp, hid, stride=2, bias=bias, use_bn=use_bn, mode=mode)
-        self.layers = nn.Sequential(*[conv_bn(hid, hid, stride=2, bias=bias, use_bn=use_bn, mode=mode) \
+        self.layers = nn.Sequential(*[conv_bn(hid, hid, stride=1, bias=bias, use_bn=use_bn, mode=mode) \
                                       for i in range(max(0,nlayer-2))])
         self.GAPool = GAPool()
         self.out = FC(hid, out, bias=False, mode="linear")
