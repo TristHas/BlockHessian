@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import os
 
 def gen_rnd_ds(inp_dim, inp_mean=0, inp_var=1, 
                target_dim=10, nsamp=1000, device=0):
@@ -28,18 +29,18 @@ def pad(x, border=4):
 def transpose(x, source='NHWC', target='NCHW'):
     return x.transpose([source.index(d) for d in target]) 
 
-def cifar10(root):
-    train_set = torchvision.datasets.CIFAR10(root=root, train=True, download=True)
-    test_set = torchvision.datasets.CIFAR10(root=root, train=False, download=True)
+def cifar10(root, download=True):
+    train_set = torchvision.datasets.CIFAR10(root=root, train=True, download=download)
+    test_set = torchvision.datasets.CIFAR10(root=root, train=False, download=download)
     return {
         'train': {'data': train_set.data, 'labels': train_set.targets},
         'test': {'data': test_set.data, 'labels': test_set.targets}
     }
 
-def gen_cifar10_ds(nsamp=1000, device=0, DATA_DIR="../../data", split='train'):
+def gen_cifar10_ds(nsamp=1000, device=0, DATA_DIR=os.path.join(os.path.dirname(__file__),"../../data"), split='train', download=True):
     """
     """
-    dataset = cifar10(root=DATA_DIR)
+    dataset = cifar10(root=DATA_DIR, download=download)
     x = transpose(normalise(pad(dataset['train']['data'], 4)))
     #y = np.expand_dims(dataset['train']['labels'], axis=-1)
     y = dataset[split]['labels']

@@ -20,7 +20,7 @@ def get_model_ds_loss(inp_dim, hid_dim, out_dim,
                       nsamp, device, loss_mode='CrossEntropy'):
     
     model =  conv_net(inp_dim, hid_dim, out_dim, nlayer, bias, use_bn, mode).cuda(device)
-    ds = gen_cifar10_ds(nsamp, device)
+    ds = gen_cifar10_ds(nsamp, device, download=False)
     
     assert loss_mode in ["CrossEntropy", "Linear"]
     if loss_mode=='CrossEntropy':
