@@ -24,6 +24,13 @@ def dot_product(delta, grad):
 ###
 ### Model
 ###
+def base_get_params(model):
+    return {i:[x] for i,x in enumerate(model.parameters())}
+
+def copy_grad(model, get_params=base_get_params):
+    return {k:[x.grad.clone() for x in v] \
+            for k,v in get_params(model).items()}
+
 def zero_grad(model):
     """
     """
@@ -31,11 +38,6 @@ def zero_grad(model):
         if p.grad is not None:
             p.grad.detach_()
             p.grad.zero_()
-
-def get_param(model, i):
-    """
-    """
-    return list(model.parameters())[i]
 
 def clone_model(model):
     """
@@ -51,20 +53,21 @@ def get_model_device(model):
     """
     return next(model.parameters()).device
 
-def init_hessian(model):
+def init_hessian(model, get_params=base_get_params):
     """
     """
-    N = len(list(model.parameters()))
+    N = len(get_params(model))
     device = get_model_device(model)
     return torch.zeros((N, N), device=device)
 
-def pair_indexes(model):
+def pair_indexes(params):
     """
     """
-    for i,_ in enumerate(model.parameters()):
-        for j,_ in enumerate(model.parameters()):
+    keys = list(params.keys())
+    for i,k1 in enumerate(keys):
+        for j,k2 in enumerate(keys):
             if i<j:
-                yield i,j
+                yield (i, k1), (j, k2)
 
 class Updated_params():
     def __init__(self, params, deltas, lr):
