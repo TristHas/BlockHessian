@@ -6,15 +6,24 @@ import matplotlib
 matplotlib.rcParams['animation.embed_limit']=200
 
 class vals_anime():
-    def __init__(self, vals, ax, title):
+    def __init__(self, vals, ax, title=None, xlabel=None, ylabel=None):
         self.ax = ax
         self.vals = vals
-        ax.set_title(title)
+        if title is not None:
+            ax.set_title(title)
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+            
         ax.set_xlim(0, len(vals))
-        ax.set_ylim(min(vals), max(vals))
-        #ax.plot(range(len(vals)), vals)
+        if len(ax.get_lines())==0:
+            ax.set_ylim(min(vals), max(vals))
+        else:
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim(min(min(vals),ymin), max(max(vals),ymax))
         self.ln0, = ax.plot(range(len(vals)), vals)
-        self.ln, = ax.plot([], [], 'o', color=self.ln0.get_color())
+        self.ln, = ax.plot([], [], 'or', markersize=16)
         
     def init(self):
         return self.ln
@@ -24,11 +33,16 @@ class vals_anime():
         return self.ln
 
 class imgs_anime():
-    def __init__(self, imgs, ax, title, time_norm=False):
+    def __init__(self, imgs, ax, title=None, time_norm=False, ticks=None):
         self.ax = ax
+        if ticks is not None:
+            ax.set_xticklabels(ticks, rotation=30)
+            ax.set_yticklabels(ticks)
+
         self.imgs, vmin, vmax = self.normalize_imgs(imgs, time_norm)
         self.im = ax.imshow(self.imgs[0], vmin=vmin, vmax=vmax)
-        ax.set_title(title)
+        if title is not None:
+            ax.set_title(title)
         
     def init(self):
         return
@@ -55,9 +69,10 @@ class bars_anime():
     #
     # Assuming that always first-order is positive and higher-order is negative.
     
-    def __init__(self, data, ax, title, fix_range=False):
+    def __init__(self, data, ax, title=None, fix_range=False, ticks=None, ylabel=None):
         self.ax = ax
-        ax.set_title(title)
+        if title is not None:
+            ax.set_title(title)
         self.fix_range = fix_range
         self.data = data
         self.dmax = data.max()
@@ -65,7 +80,12 @@ class bars_anime():
         ax.set_xlim(-1, data.shape[1])
         ax.set_ylim(self.dmin, self.dmax)
         width = 0.8/data.shape[2]
+        if ticks is not None:
+            ax.set_xticklabels(ticks, rotation=30)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
 
+        
         x = np.arange(data.shape[1])
         self.rectss = []
         for i in range(data.shape[2]):
@@ -73,6 +93,7 @@ class bars_anime():
                 self.rectss.append(ax.bar(x+width*i-width*data.shape[2]/2, data[0,:,0], width=width, align="edge"))
             else:
                 self.rectss.append(ax.bar(x+width*i-width*data.shape[2]/2, data[0,:,i], width=width, align="edge"))
+        ax.legend(["delta","first","higher"])
 
     def init(self):
         return
