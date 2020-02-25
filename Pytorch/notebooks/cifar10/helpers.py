@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import pandas as pd
+import pickle
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import torch
@@ -10,10 +11,14 @@ import torch.nn as nn
 sys.path.append(os.path.join(os.path.dirname(__file__),"../../src"))
 from utils import zero_grad
 from activation_stats import first_order_analysis
-from block_analysis import block_hessian, eval_loss, update_params
+from block_analysis import block_hessian, eval_loss
 from models import conv_net
 from data import gen_cifar10_ds
 from losses import LinearClassification
+
+def update_params(params, delta, lr):
+    for param, delta in zip(params, deltas):
+        param.data.add_(-lr, delta)
 
 def get_model_ds_loss(inp_dim, hid_dim, out_dim,
                       nlayer, bias, use_bn, mode,
@@ -141,3 +146,41 @@ def preprocess(data, bn):
             "loss": data["loss"],
             "acc": data["acc"]}
 
+def plot_loss(fname, start=0, nframes=2000, title=None):
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Loss")
+    with open(fname,'rb') as f:
+        stat = pickle.load(f)
+    loss = np.array(stat["loss"])
+    ax.plot(loss[start:nframes], alpha=0.8)
+            
+    return fig
+
+def plot_dloss(fname, start=0, nframes=2000, title=None):    
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Delta Loss")
+    with open(fname,'rb') as f:
+        stat = pickle.load(f)
+    fo = np.array(stat["fo"]) * (-1)
+    ho = np.array(stat["ho"]) * (-1)
+    dloss = fo + ho
+    ax.plot(dloss[start:nframes], alpha=0.8)
+
+    return fig
+
+def plot_fh(fname, start=0, nframes=2000, title=None):
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("First/Higher Order Effect")
+    with open(fname,'rb') as f:
+        stat = pickle.load(f)
+    fo = np.array(stat["fo"]) * (-1)
+    ho = np.array(stat["ho"]) * (-1)
+    ax.plot(fo[start:nframes], label=f"first", alpha=0.8)
+    ax.plot(ho[start:nframes], label=f"higher", alpha=0.8)
+
+    ax.legend()
+            
+    return fig
